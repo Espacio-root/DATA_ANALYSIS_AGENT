@@ -7,14 +7,19 @@ import json
 import duckdb
 from .config import settings
 
+_docker_available_cache = None
+
 def is_docker_available() -> bool:
-    """Checks if Docker is installed and running on the host system."""
+    """Checks if Docker is installed and running on the host system, cached for efficiency."""
+    global _docker_available_cache
+    if _docker_available_cache is not None:
+        return _docker_available_cache
     try:
-        # Run docker info in quiet mode
         res = subprocess.run(["docker", "info"], capture_output=True, text=True, timeout=3)
-        return res.returncode == 0
+        _docker_available_cache = (res.returncode == 0)
     except (subprocess.SubprocessError, FileNotFoundError):
-        return False
+        _docker_available_cache = False
+    return _docker_available_cache
 
 def run_local_fallback(code_content: str, dataset_path: str, temp_dir: str) -> tuple[bool, any, bool]:
     """Runs LLM code locally as a fallback when Docker is not available.
