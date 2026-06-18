@@ -2481,6 +2481,37 @@ export default function App() {
                       className="flex-1 bg-transparent text-sm text-white focus:outline-none placeholder-zinc-500"
                     />
                   </div>
+
+                  {/* Quick-start Demo Workspace Option */}
+                  <div className="mb-5 p-4 rounded-xl border border-emerald-900/30 bg-emerald-950/5 flex flex-col md:flex-row md:items-center justify-between gap-3 animate-fade-in shrink-0">
+                    <div>
+                      <h4 className="text-white font-bold text-sm flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-emerald-450" />
+                        Explore EasyInsight instantly
+                      </h4>
+                      <p className="text-xs text-zinc-400 mt-1">
+                        Try our pre-loaded Titanic Passenger dataset sandbox to run analysis, clean stats, and plot visualizations right away.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCreateDemoSession}
+                      disabled={isCreatingDemoSession}
+                      className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition shrink-0 disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {isCreatingDemoSession ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Loading Demo...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Launch Demo Workspace</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                   
                   {/* Table Headers */}
                   <div className="grid grid-cols-12 text-[10px] font-mono uppercase tracking-wider text-zinc-400 pb-2 border-b border-[#27272a] px-3">
