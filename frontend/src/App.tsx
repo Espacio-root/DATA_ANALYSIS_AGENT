@@ -196,6 +196,7 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [showReplaceModal, setShowReplaceModal] = useState(false);
   const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
+  const [isCreatingDemoSession, setIsCreatingDemoSession] = useState(false);
   const dragCounterRef = useRef(0);
 
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -703,6 +704,31 @@ export default function App() {
     } finally {
       setIsCreatingWorkspace(false);
       setPendingUploadFile(null);
+    }
+  };
+
+  const handleCreateDemoSession = async () => {
+    setIsCreatingDemoSession(true);
+    try {
+      const res = await fetch(`${API_BASE}/sessions/create-demo`, {
+        method: "POST"
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const newSession = data.session;
+        setSessions(prev => [newSession, ...prev]);
+        setSelectedSessionId(newSession.id);
+        setDataset(data.dataset);
+        fetchSessionData(newSession.id);
+        showNotification("success", "Demo Workspace Created", "Loaded Titanic passenger dataset successfully!");
+      } else {
+        showNotification("error", "Error", "Failed to initialize demo workspace.");
+      }
+    } catch (err) {
+      console.error("Error creating demo session:", err);
+      showNotification("error", "Error", "An error occurred while setting up the demo workspace.");
+    } finally {
+      setIsCreatingDemoSession(false);
     }
   };
 
@@ -2012,6 +2038,31 @@ export default function App() {
                         <li>Visualize graphs dynamically in the Visual Analytics viewport.</li>
                       </ol>
                     </div>
+
+                    <div className="bg-[#1c1c1f] border border-[#27272a] rounded-2xl p-4 text-sm text-zinc-300 space-y-3">
+                      <h4 className="font-bold text-white text-xs uppercase tracking-wider text-zinc-400">Quick Start:</h4>
+                      <p className="text-xs text-zinc-400">
+                        Don't have a dataset ready? Click below to try EasyInsight instantly with our sample Titanic passenger dataset.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleCreateDemoSession}
+                        disabled={isCreatingDemoSession}
+                        className="w-full md:w-auto px-5 py-2.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-zinc-200 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        {isCreatingDemoSession ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Loading Demo...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Try with Demo Dataset</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   messages.map((m, idx) => (
@@ -2117,7 +2168,7 @@ export default function App() {
                 )}
 
                 {/* Dynamic Suggestion Chips */}
-                {dataset && dataset.schema_json && (
+                {dataset && dataset.schema_json && messages.length === 0 && (
                   <div className="mb-2.5 flex flex-wrap gap-2 animate-fade-in">
                     {getDynamicSuggestions().map((suggestion, sIdx) => (
                       <button

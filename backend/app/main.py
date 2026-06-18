@@ -73,6 +73,79 @@ def download_dataset_if_missing(s3_path: str, local_path: str):
         with open(local_path, "wb") as f:
             f.write(response.content)
 
+def get_demo_titanic_csv() -> bytes:
+    import io
+    data = [
+        {"PassengerId": 1, "Survived": 0, "Pclass": 3, "Name": "Braund, Mr. Owen Harris", "Sex": "male", "Age": 22, "SibSp": 1, "Parch": 0, "Ticket": "A/5 21171", "Fare": 7.25, "Cabin": None, "Embarked": "S"},
+        {"PassengerId": 2, "Survived": 1, "Pclass": 1, "Name": "Cumings, Mrs. John Bradley (Florence Briggs Thayer)", "Sex": "female", "Age": 38, "SibSp": 1, "Parch": 0, "Ticket": "PC 17599", "Fare": 71.2833, "Cabin": "C85", "Embarked": "C"},
+        {"PassengerId": 3, "Survived": 1, "Pclass": 3, "Name": "Heikkinen, Miss. Laina", "Sex": "female", "Age": 26, "SibSp": 0, "Parch": 0, "Ticket": "STON/O2. 3101282", "Fare": 7.925, "Cabin": None, "Embarked": "S"},
+        {"PassengerId": 4, "Survived": 1, "Pclass": 1, "Name": "Futrelle, Mrs. Jacques Heath (Lily May Peel)", "Sex": "female", "Age": 35, "SibSp": 1, "Parch": 0, "Ticket": "113803", "Fare": 53.1, "Cabin": "C123", "Embarked": "S"},
+        {"PassengerId": 5, "Survived": 0, "Pclass": 3, "Name": "Allen, Mr. William Henry", "Sex": "male", "Age": 35, "SibSp": 0, "Parch": 0, "Ticket": "373450", "Fare": 8.05, "Cabin": None, "Embarked": "S"},
+        {"PassengerId": 6, "Survived": 0, "Pclass": 3, "Name": "Moran, Mr. James", "Sex": "male", "Age": None, "SibSp": 0, "Parch": 0, "Ticket": "330877", "Fare": 8.4583, "Cabin": None, "Embarked": "Q"},
+        {"PassengerId": 7, "Survived": 0, "Pclass": 1, "Name": "McCarthy, Mr. Timothy J", "Sex": "male", "Age": 54, "SibSp": 0, "Parch": 0, "Ticket": "17463", "Fare": 51.8625, "Cabin": "E46", "Embarked": "S"},
+        {"PassengerId": 8, "Survived": 0, "Pclass": 3, "Name": "Palsson, Master. Gosta Leonard", "Sex": "male", "Age": 2, "SibSp": 3, "Parch": 1, "Ticket": "349909", "Fare": 21.075, "Cabin": None, "Embarked": "S"},
+        {"PassengerId": 9, "Survived": 1, "Pclass": 3, "Name": "Johnson, Mrs. Oscar W (Elisabeth Vilhelmina Berg)", "Sex": "female", "Age": 27, "SibSp": 0, "Parch": 2, "Ticket": "347742", "Fare": 11.1333, "Cabin": None, "Embarked": "S"},
+        {"PassengerId": 10, "Survived": 1, "Pclass": 2, "Name": "Nasser, Mrs. Nicholas (Adele Achem)", "Sex": "female", "Age": 14, "SibSp": 1, "Parch": 0, "Ticket": "237736", "Fare": 30.0708, "Cabin": None, "Embarked": "C"},
+        {"PassengerId": 11, "Survived": 1, "Pclass": 3, "Name": "Sandstrom, Miss. Marguerite Rut", "Sex": "female", "Age": 4, "SibSp": 1, "Parch": 1, "Ticket": "PP 9549", "Fare": 16.7, "Cabin": "G6", "Embarked": "S"},
+        {"PassengerId": 12, "Survived": 1, "Pclass": 1, "Name": "Bonnell, Miss. Elizabeth", "Sex": "female", "Age": 58, "SibSp": 0, "Parch": 0, "Ticket": "113783", "Fare": 26.55, "Cabin": "C103", "Embarked": "S"},
+        {"PassengerId": 13, "Survived": 0, "Pclass": 3, "Name": "Saundercock, Mr. William Henry", "Sex": "male", "Age": 20, "SibSp": 0, "Parch": 0, "Ticket": "A/5. 2151", "Fare": 8.05, "Cabin": None, "Embarked": "S"},
+        {"PassengerId": 14, "Survived": 0, "Pclass": 3, "Name": "Andersson, Mr. Anders Johan", "Sex": "male", "Age": 39, "SibSp": 1, "Parch": 5, "Ticket": "347082", "Fare": 31.275, "Cabin": None, "Embarked": "S"},
+        {"PassengerId": 15, "Survived": 0, "Pclass": 3, "Name": "Vestrom, Miss. Hulda Amanda Adolfina", "Sex": "female", "Age": 14, "SibSp": 0, "Parch": 0, "Ticket": "350406", "Fare": 7.8542, "Cabin": None, "Embarked": "S"},
+        {"PassengerId": 16, "Survived": 1, "Pclass": 2, "Name": "Hewlett, Mrs. (Mary D Kingcome) ", "Sex": "female", "Age": 55, "SibSp": 0, "Parch": 0, "Ticket": "248706", "Fare": 16.0, "Cabin": None, "Embarked": "S"},
+        {"PassengerId": 17, "Survived": 0, "Pclass": 3, "Name": "Rice, Master. Eugene", "Sex": "male", "Age": 2, "SibSp": 4, "Parch": 1, "Ticket": "382652", "Fare": 29.125, "Cabin": None, "Embarked": "Q"},
+        {"PassengerId": 18, "Survived": 1, "Pclass": 2, "Name": "Williams, Mr. Charles Eugene", "Sex": "male", "Age": None, "SibSp": 0, "Parch": 0, "Ticket": "244373", "Fare": 13.0, "Cabin": None, "Embarked": "S"},
+        {"PassengerId": 19, "Survived": 0, "Pclass": 3, "Name": "Vander Planke, Mrs. Julius (Emelia Maria Vandemoortele)", "Sex": "female", "Age": 31, "SibSp": 1, "Parch": 0, "Ticket": "345763", "Fare": 18.0, "Cabin": None, "Embarked": "S"},
+        {"PassengerId": 20, "Survived": 1, "Pclass": 3, "Name": "Masselmani, Mrs. Fatima", "Sex": "female", "Age": None, "SibSp": 0, "Parch": 0, "Ticket": "2649", "Fare": 7.225, "Cabin": None, "Embarked": "C"}
+    ]
+    df = pd.DataFrame(data)
+    stream = io.StringIO()
+    df.to_csv(stream, index=False)
+    return stream.getvalue().encode('utf-8')
+
+@app.post("/api/sessions/create-demo")
+async def create_demo_session():
+    try:
+        session = db_service.create_session("Demo Data Analysis")
+        session_id = session["id"]
+        
+        file_bytes = get_demo_titanic_csv()
+        file_name = "titanic.csv"
+        
+        local_path = get_local_dataset_path(session_id, file_name)
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        with open(local_path, "wb") as f:
+            f.write(file_bytes)
+            
+        profile = profile_data(local_path)
+        
+        storage_path = f"{session_id}/{file_name}"
+        db_service.upload_file("datasets", storage_path, file_bytes, "text/csv")
+        dataset = db_service.create_dataset(session_id, file_name, storage_path, profile)
+        
+        intro_content = (
+            "Hello! I have loaded the Titanic passenger survival dataset for you.\n\n"
+            "This complex dataset contains demographic details of passengers (Age, Sex, Cabin, Fare) and their survival outcome. "
+            "Let's explore it! You can ask questions in natural language, clean the dataset, or try one of the suggestions below:"
+        )
+        db_service.save_message(
+            session_id=session_id,
+            role="assistant",
+            content=intro_content,
+            follow_ups=[
+                "Compare survival rates by sex",
+                "Show the average fare paid by passenger class",
+                "Show age distribution of survivors"
+            ]
+        )
+        
+        return {
+            "success": True,
+            "session": session,
+            "dataset": dataset
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/sessions")
 async def create_session(data: SessionCreate):
     try:
