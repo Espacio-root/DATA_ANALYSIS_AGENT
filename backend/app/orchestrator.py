@@ -72,7 +72,7 @@ def handle_conversational(question: str, schema: dict, history: list) -> tuple[s
         return "I am ready to help you analyze your data.", ["What columns are in the dataset?", "Can you show statistics?"]
 
 
-def get_plan(question: str, schema: dict, history: list, error_feedback: str = None) -> dict:
+def get_plan(question: str, schema: dict, history: list, error_feedback: str = None, failed_code: str = None) -> dict:
     """Assembles Python scripts designed to execute on a DuckDB database connection."""
     if not client:
         return {
@@ -98,11 +98,7 @@ def get_plan(question: str, schema: dict, history: list, error_feedback: str = N
     13. DISCUSSION CONTEXT RULE: If the user's prompt is a follow-up discussing an existing chart context (starting with "[Context: Regarding the chart...]"):
         - Crucially, do NOT generate any matplotlib/seaborn plotting code (no plt or sns plot calls) UNLESS the user explicitly asks to modify the chart, redraw the chart, change the plot, or update the visualization.
         - If they are just asking a question about values, counts, averages, or calculations on the chart's data, calculate the numbers/result ONLY and store it in the `result` variable. Do NOT plot anything.
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> origin/pr/2
     Dataset Auto-Profile Summary (columns, types, nulls):
     {schema}
 
@@ -120,9 +116,13 @@ def get_plan(question: str, schema: dict, history: list, error_feedback: str = N
     messages.append({"role": "user", "content": question})
 
     if error_feedback:
+        content_msg = f"⚠️ PREVIOUS CODE EXECUTION FAILED WITH EXCEPTION:\n{error_feedback}\n"
+        if failed_code:
+            content_msg += f"THE FAILED CODE WAS:\n```python\n{failed_code}\n```\n"
+        content_msg += "Fix the logic, eliminate bad indents, and return updated code."
         messages.append({
             "role": "system",
-            "content": f"⚠️ PREVIOUS CODE EXECUTION FAILED WITH EXCEPTION:\n{error_feedback}\nFix the logic, eliminate bad indents, and return updated code."
+            "content": content_msg
         })
 
     response = client.chat.completions.create(
@@ -238,7 +238,7 @@ def process_query(session_id: str, question: str, schema: dict, dataset_local_pa
 
     for attempt in range(settings.MAX_RETRIES):
         try:
-            plan = get_plan(question, schema, history, error_feedback)
+            plan = get_plan(question, schema, history, error_feedback, cleaned_code)
             raw_code = plan.get("python_code", "")
             cleaned_code = clean_source_code(raw_code)
 
