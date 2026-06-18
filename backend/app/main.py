@@ -239,6 +239,71 @@ async def upload_dataset(session_id: str, file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save metadata: {e}")
 
+@app.post("/api/sessions/{session_id}/clean-dataset")
+async def clean_session_dataset(session_id: str):
+    try:
+        dataset = db_service.get_dataset_by_session(session_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="No dataset uploaded for this session.")
+        
+        file_name = dataset.get("file_name")
+        s3_path = dataset.get("s3_path")
+        local_path = get_local_dataset_path(session_id, file_name)
+        
+        download_dataset_if_missing(s3_path, local_path)
+        
+        ext = os.path.splitext(local_path)[-1].lower()
+        if ext == ".csv":
+            df = pd.read_csv(local_path)
+        elif ext == ".json":
+            df = pd.read_json(local_path)
+        elif ext in [".xls", ".xlsx"]:
+            df = pd.read_excel(local_path)
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported dataset format.")
+            
+        # Perform standard cleaning
+        # 1. Strip string column whitespaces
+        for col in df.select_dtypes(include=['object']):
+            df[col] = df[col].astype(str).str.strip()
+            
+        # 2. Fill missing numerical values with 0
+        for col in df.select_dtypes(include=['number']):
+            if df[col].isnull().any():
+                df[col] = df[col].fillna(0)
+                
+        # 3. Drop columns that are completely null
+        df = df.dropna(how='all', axis=1)
+        
+        # Save back to local path
+        if ext == ".csv":
+            df.to_csv(local_path, index=False)
+        elif ext == ".json":
+            df.to_json(local_path, orient="records")
+        elif ext in [".xls", ".xlsx"]:
+            df.to_excel(local_path, index=False)
+            
+        # Re-profile the cleaned data
+        profile = profile_data(local_path)
+        
+        # Update metadata in storage/db
+        with open(local_path, "rb") as f:
+            file_bytes = f.read()
+            
+        base_id = session_id.split(":")[0]
+        db_service.upload_file("datasets", s3_path, file_bytes, "application/octet-stream")
+        
+        # Update dataset profile in database
+        updated_dataset = db_service.create_dataset(session_id, file_name, s3_path, profile)
+        
+        return {
+            "success": True,
+            "dataset": updated_dataset,
+            "profile": profile
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/sessions/{session_id}/dataset")
 async def get_session_dataset(session_id: str):
     try:

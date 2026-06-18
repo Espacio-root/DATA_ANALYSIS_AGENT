@@ -100,6 +100,81 @@ export default function App() {
       document.title = "EasyInsight";
     }
   }, [selectedSessionId]);
+
+  useEffect(() => {
+    const handleWindowDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      if (!e.dataTransfer?.types.includes("Files")) return;
+      dragCounterRef.current += 1;
+      setIsDragging(true);
+    };
+
+    const handleWindowDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current -= 1;
+      if (dragCounterRef.current <= 0) {
+        setIsDragging(false);
+        dragCounterRef.current = 0;
+      }
+    };
+
+    const handleWindowDragOver = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
+    const handleWindowDrop = async (e: DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current = 0;
+      setIsDragging(false);
+
+      const file = e.dataTransfer?.files?.[0];
+      if (!file) return;
+
+      if (!selectedSessionId) {
+        showNotification("error", "Workspace Required", "Please select or create a workspace first.");
+        return;
+      }
+
+      const validExts = [".csv", ".json", ".xls", ".xlsx", ".sql"];
+      const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      if (!validExts.includes(fileExt)) {
+        showNotification("error", "Unsupported Format", "Unsupported file format. Please drop a CSV, JSON, Excel, or SQL file.");
+        return;
+      }
+
+      if (dataset) {
+        setPendingUploadFile(file);
+        setShowReplaceModal(true);
+        return;
+      }
+
+      setIsUploading(true);
+      setUploadProgress(0);
+      try {
+        const data = await performUpload(file);
+        setDataset(data.dataset);
+        fetchSessionData(selectedSessionId);
+      } catch (err: any) {
+        console.error("Upload error:", err);
+        showNotification("error", "Upload Error", err.message || "An error occurred during file upload.");
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(null);
+      }
+    };
+
+    window.addEventListener("dragenter", handleWindowDragEnter);
+    window.addEventListener("dragleave", handleWindowDragLeave);
+    window.addEventListener("dragover", handleWindowDragOver);
+    window.addEventListener("drop", handleWindowDrop);
+
+    return () => {
+      window.removeEventListener("dragenter", handleWindowDragEnter);
+      window.removeEventListener("dragleave", handleWindowDragLeave);
+      window.removeEventListener("dragover", handleWindowDragOver);
+      window.removeEventListener("drop", handleWindowDrop);
+    };
+  }, [selectedSessionId, dataset]);
   
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
@@ -119,6 +194,9 @@ export default function App() {
   const [dbTable, setDbTable] = useState("");
   const [isConnectingDb, setIsConnectingDb] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
+  const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
+  const dragCounterRef = useRef(0);
 
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -456,10 +534,11 @@ export default function App() {
     });
   };
 
-  const performUpload = (file: File) => {
+  const performUpload = (file: File, sessionId?: string) => {
+    const targetSessionId = sessionId || selectedSessionId;
     return new Promise<any>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${API_BASE}/sessions/${selectedSessionId}/upload`);
+      xhr.open("POST", `${API_BASE}/sessions/${targetSessionId}/upload`);
       
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
@@ -496,6 +575,13 @@ export default function App() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedSessionId) return;
+
+    if (dataset) {
+      setPendingUploadFile(file);
+      setShowReplaceModal(true);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
 
     setIsUploading(true);
     setUploadProgress(0);
@@ -564,36 +650,13 @@ export default function App() {
       setIsConnectingDb(false);
     }
   };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const file = e.dataTransfer.files?.[0];
-    if (!file || !selectedSessionId) return;
-
-    const validExts = [".csv", ".json", ".xls", ".xlsx"];
-    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    if (!validExts.includes(fileExt)) {
-      showNotification("error", "Unsupported Format", "Unsupported file format. Please drop a CSV, JSON, or Excel file.");
-      return;
-    }
-
+  const handleConfirmReplace = async () => {
+    if (!pendingUploadFile || !selectedSessionId) return;
+    setShowReplaceModal(false);
     setIsUploading(true);
     setUploadProgress(0);
-
     try {
-      const data = await performUpload(file);
+      const data = await performUpload(pendingUploadFile, selectedSessionId);
       setDataset(data.dataset);
       fetchSessionData(selectedSessionId);
     } catch (err: any) {
@@ -602,7 +665,199 @@ export default function App() {
     } finally {
       setIsUploading(false);
       setUploadProgress(null);
+      setPendingUploadFile(null);
     }
+  };
+
+  const handleConfirmNewWorkspace = async () => {
+    if (!pendingUploadFile) return;
+    setShowReplaceModal(false);
+    setIsCreatingWorkspace(true);
+    try {
+      const res = await fetch(`${API_BASE}/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: `Workspace - ${pendingUploadFile.name}` })
+      });
+      if (res.ok) {
+        const newSession = await res.json();
+        setSessions(prev => [newSession, ...prev]);
+        setSelectedSessionId(newSession.id);
+        
+        setIsUploading(true);
+        setUploadProgress(0);
+        try {
+          const data = await performUpload(pendingUploadFile, newSession.id);
+          setDataset(data.dataset);
+          fetchSessionData(newSession.id);
+        } catch (err: any) {
+          console.error("Upload error:", err);
+          showNotification("error", "Upload Error", err.message || "An error occurred during file upload.");
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(null);
+        }
+      }
+    } catch (err) {
+      console.error("Error creating session:", err);
+    } finally {
+      setIsCreatingWorkspace(false);
+      setPendingUploadFile(null);
+    }
+  };
+
+  const handleCancelReplace = () => {
+    setShowReplaceModal(false);
+    setPendingUploadFile(null);
+  };
+
+  const [isCleaningDataset, setIsCleaningDataset] = useState(false);
+
+  const handleCleanDataset = async () => {
+    if (!selectedSessionId || !dataset) return;
+    setIsCleaningDataset(true);
+    try {
+      const res = await fetch(`${API_BASE}/sessions/${selectedSessionId}/clean-dataset`, {
+        method: "POST"
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDataset(data.dataset);
+        fetchSessionData(selectedSessionId);
+        showNotification("success", "Dataset Cleaned", "Successfully filled missing values and formatted text columns!");
+      } else {
+        showNotification("error", "Cleaning Failed", "Failed to clean dataset.");
+      }
+    } catch (err) {
+      console.error("Error cleaning dataset:", err);
+      showNotification("error", "Cleaning Error", "An error occurred while cleaning the dataset.");
+    } finally {
+      setIsCleaningDataset(false);
+    }
+  };
+
+  const handleExportReport = () => {
+    if (!selectedSessionId) return;
+    const sessionTitle = sessions.find(s => s.id === selectedSessionId)?.title || "Workspace Analysis";
+    
+    let htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>EasyInsight Report - ${sessionTitle}</title>
+      <style>
+        body {
+          background-color: #09090b;
+          color: #e4e4e7;
+          font-family: system-ui, -apple-system, sans-serif;
+          padding: 40px 24px;
+          margin: 0;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        h1 { color: #ffffff; border-bottom: 1px solid #27272a; padding-bottom: 12px; margin-bottom: 24px; }
+        .message { margin-bottom: 24px; padding: 20px; border-radius: 16px; border: 1px solid #27272a; }
+        .user { background-color: #121214; }
+        .assistant { background-color: #1c1c1f; }
+        .role { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #a1a1aa; margin-bottom: 8px; letter-spacing: 0.1em; }
+        .content { font-size: 14px; line-height: 1.6; }
+        .code { font-family: monospace; background: #000; padding: 12px; border-radius: 8px; border: 1px solid #27272a; color: #34d399; overflow-x: auto; font-size: 12px; margin-top: 12px; }
+        .chart { margin-top: 16px; text-align: center; }
+        .chart img { max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #27272a; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+        th, td { padding: 8px; border: 1px solid #27272a; text-align: left; }
+        th { background: #18181b; }
+      </style>
+    </head>
+    <body>
+      <h1>EasyInsight Report: ${sessionTitle}</h1>
+    `;
+
+    messages.forEach(m => {
+      const isUser = m.role === "user";
+      const roleName = isUser ? "User" : "EasyInsight Analyst";
+      const codeHtml = m.generated_code ? `<pre class="code"><code>${m.generated_code}</code></pre>` : "";
+      
+      let chartHtml = "";
+      if (m.chart_url) {
+        const fullUrl = m.chart_url.startsWith("http") ? m.chart_url : `${API_BASE.replace('/api', '')}${m.chart_url}`;
+        chartHtml = `<div class="chart"><img src="${fullUrl}" alt="Analysis Visualization" /></div>`;
+      }
+
+      let cleanContent = m.content
+        .replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br />');
+
+      htmlContent += `
+        <div class="message ${m.role}">
+          <div class="role">${roleName}</div>
+          <div class="content">${cleanContent}</div>
+          ${chartHtml}
+          ${codeHtml}
+        </div>
+      `;
+    });
+
+    htmlContent += `
+    </body>
+    </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `easyinsight_report_${selectedSessionId.substring(0, 8)}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const getDynamicSuggestions = () => {
+    if (!dataset || !dataset.schema_json || !dataset.schema_json.columns) return [];
+    const cols = dataset.schema_json.columns;
+    const dtypes = dataset.schema_json.dtypes || {};
+    
+    const numericCols: string[] = [];
+    const textCols: string[] = [];
+    const dateCols: string[] = [];
+    
+    cols.forEach((col: string) => {
+      const dtype = (dtypes[col] || "").toLowerCase();
+      const isNum = ["int", "float", "double", "num", "decimal"].some(t => dtype.includes(t));
+      const isDate = ["date", "time", "timestamp"].some(t => dtype.includes(t));
+      if (isNum) {
+        numericCols.push(col);
+      } else if (isDate) {
+        dateCols.push(col);
+      } else {
+        textCols.push(col);
+      }
+    });
+    
+    const suggestions: string[] = [];
+    
+    if (numericCols.length > 0) {
+      const col = numericCols[0];
+      suggestions.push(`What is the average ${col}?`);
+    }
+    
+    if (textCols.length > 0 && numericCols.length > 0) {
+      const txt = textCols[0];
+      const num = numericCols[0];
+      suggestions.push(`Show the total ${num} grouped by ${txt}`);
+    } else if (textCols.length > 1) {
+      suggestions.push(`What are the top values in ${textCols[0]}?`);
+    } else if (numericCols.length > 1) {
+      suggestions.push(`Compare the distribution of ${numericCols[0]} and ${numericCols[1]}`);
+    }
+    
+    if (dateCols.length > 0) {
+      suggestions.push(`Show the trend of data over ${dateCols[0]}`);
+    } else {
+      suggestions.push(`Show me a summary breakdown of the dataset`);
+    }
+    
+    return suggestions.slice(0, 3);
   };
 
   const executeAnalysisQuestion = async (userQuestion: string) => {
@@ -818,7 +1073,12 @@ export default function App() {
 
       if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
         const cols = line.split("|").map(c => c.trim()).filter((_, colIdx, arr) => colIdx > 0 && colIdx < arr.length - 1);
-        const isSeparator = cols.length > 0 && cols.every(c => /^[-:\s]+$/.test(c));
+        const isSeparator = cols.length > 0 && cols.every(c => {
+          const openB = String.fromCharCode(91);
+          const closeB = String.fromCharCode(93);
+          const pattern = "^" + openB + "-:\\s" + closeB + "+$";
+          return new RegExp(pattern).test(c);
+        });
         if (!isSeparator) {
           currentTableRows.push(cols);
         }
@@ -965,7 +1225,7 @@ export default function App() {
                 )}
               </div>
 
-              {/* Database Dropdown Trigger */}
+              {/* Quick Actions Dropdown Trigger */}
               <div className="relative" onClick={(e) => e.stopPropagation()}>
                 <span 
                   onClick={(e) => {
@@ -976,10 +1236,36 @@ export default function App() {
                     activeNavMenu === "database" ? "text-white bg-[#27272a]" : ""
                   }`}
                 >
-                  Database
+                  Quick Actions
                 </span>
                 {activeNavMenu === "database" && (
                   <div className="absolute left-0 mt-2.5 w-60 bg-[#121214] border border-[#27272a] rounded-lg shadow-xl py-1 z-50 text-xs text-[#e4e4e7]" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedSessionId(null);
+                        setActiveNavMenu(null);
+                      }}
+                      className="w-full text-left px-3.5 py-2.5 hover:bg-[#27272a] hover:text-white flex items-center gap-2 font-medium"
+                    >
+                      <ChevronRight className="w-4 h-4 rotate-180 text-zinc-400" />
+                      All Workspaces (Home)
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (selectedSessionId) {
+                          fileInputRef.current?.click();
+                        } else {
+                          showNotification("error", "Workspace Required", "Please open a workspace first!");
+                        }
+                        setActiveNavMenu(null);
+                      }}
+                      className="w-full text-left px-3.5 py-2.5 hover:bg-[#27272a] hover:text-white flex items-center gap-2 font-medium border-t border-[#27272a]/30"
+                    >
+                      <Upload className="w-4 h-4 text-zinc-400" />
+                      Import File...
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -998,30 +1284,16 @@ export default function App() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        showNotification("info", "DuckDB Sandbox", "DuckDB memory sandbox database is active for raw data analysis queries.");
+                        setShowHelpModal(true);
                         setActiveNavMenu(null);
                       }}
-                      className="w-full text-left px-3.5 py-2.5 hover:bg-[#27272a] hover:text-white flex items-center gap-2 font-medium"
+                      className="w-full text-left px-3.5 py-2.5 hover:bg-[#27272a] hover:text-white flex items-center gap-2 font-medium border-t border-[#27272a]/30"
                     >
-                      <Terminal className="w-4 h-4 text-zinc-400" />
-                      DuckDB Sandbox Info
+                      <Sparkles className="w-4 h-4 text-zinc-400" />
+                      Show Onboarding Guide
                     </button>
                   </div>
                 )}
-              </div>
-
-              {/* Help Trigger */}
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
-                <span 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowHelpModal(true);
-                    setActiveNavMenu(null);
-                  }}
-                  className="hover:text-white cursor-pointer transition py-1 px-2.5 rounded font-bold text-sm tracking-wide"
-                >
-                  Help
-                </span>
               </div>
             </div>
           </div>
@@ -1374,12 +1646,7 @@ export default function App() {
             
             {/* PANE 1: LEFT WORKSPACE/PROFILER (24%) */}
             <div 
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
               className={`w-full md:w-[24%] border-r border-[#27272a] bg-[#121214] flex-col overflow-hidden relative ${
-                isDragging ? "border-dashed border-white bg-zinc-900/60" : ""
-              } ${
                 activeMobileTab === "schema" ? "flex" : "hidden md:flex"
               }`}
             >
@@ -1405,6 +1672,15 @@ export default function App() {
                       />
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Cleaning Dataset overlay */}
+              {isCleaningDataset && (
+                <div className="absolute inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-4 text-center animate-fade-in">
+                  <Loader2 className="w-8 h-8 animate-spin text-emerald-400 mb-2" />
+                  <span className="text-sm font-semibold text-white">Cleaning Dataset...</span>
+                  <span className="text-xs text-zinc-400 mt-1">Formatting strings, filling nulls & profiling...</span>
                 </div>
               )}
 
@@ -1483,6 +1759,18 @@ export default function App() {
                             <ChevronRight className="w-3 h-3" />
                           </div>
                           
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCleanDataset();
+                            }}
+                            disabled={isCleaningDataset}
+                            className="p-1.5 bg-[#1c1c1f] hover:bg-emerald-950/30 text-zinc-400 hover:text-emerald-400 border border-[#27272a] hover:border-emerald-900 rounded-md transition disabled:opacity-50"
+                            title="Clean Dataset (Drop null columns, fill numeric nulls with 0, strip string whitespace)"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                          </button>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1684,6 +1972,16 @@ export default function App() {
             }`}>
               <div className="p-4 border-b border-[#27272a] bg-[#121214] flex items-center justify-between">
                 <h2 className="font-semibold text-white">Analysis Room</h2>
+                {selectedSessionId && messages.length > 0 && (
+                  <button
+                    onClick={handleExportReport}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1c1c1f] hover:bg-[#27272a] border border-[#27272a] hover:border-zinc-500 rounded-lg text-xs text-zinc-300 hover:text-white transition-all active:scale-[0.98]"
+                    title="Export HTML Analysis Report"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export Report</span>
+                  </button>
+                )}
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 pb-20 space-y-4">
@@ -1787,9 +2085,9 @@ export default function App() {
                 <div ref={chatEndRef} />
               </div>
 
-              <form onSubmit={handleAskQuestion} className="p-4 pb-7 border-t border-[#27272a] bg-[#121214]">
+              <form onSubmit={handleAskQuestion} className="p-4 pb-4 border-t border-[#27272a] bg-[#121214]">
                 {selectedDiagram && (
-                  <div className="mb-2.5 flex items-center justify-between bg-[#1c1c1f] border border-zinc-800 rounded-xl p-2.5 text-[11px] text-zinc-350 gap-3">
+                  <div className="mb-2.5 flex items-center justify-between bg-[#1c1c1f] border border-zinc-800 rounded-xl p-2.5 text-[11px] text-zinc-355 gap-3">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       {selectedDiagram.chartUrl && (
                         <img 
@@ -1817,6 +2115,26 @@ export default function App() {
                     </button>
                   </div>
                 )}
+
+                {/* Dynamic Suggestion Chips */}
+                {dataset && dataset.schema_json && (
+                  <div className="mb-2.5 flex flex-wrap gap-2 animate-fade-in">
+                    {getDynamicSuggestions().map((suggestion, sIdx) => (
+                      <button
+                        key={`suggest-${sIdx}`}
+                        type="button"
+                        onClick={() => {
+                          executeAnalysisQuestion(suggestion);
+                        }}
+                        disabled={isQuerying}
+                        className="text-[11px] text-zinc-450 hover:text-white bg-zinc-900/60 hover:bg-[#1c1c1f] border border-[#27272a] rounded-lg px-2.5 py-1.5 transition text-left cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                      >
+                        💡 {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -2601,6 +2919,61 @@ export default function App() {
           >
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {isDragging && (
+        <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex flex-col items-center justify-center border-4 border-dashed border-zinc-500 animate-fade-in pointer-events-none">
+          <Upload className="w-12 h-12 text-white animate-bounce mb-3" />
+          <span className="text-lg font-bold text-white">Drop your dataset anywhere to import it</span>
+          <span className="text-xs text-zinc-400 mt-1">CSV, JSON, Excel, or SQL</span>
+        </div>
+      )}
+
+      {showReplaceModal && pendingUploadFile && (
+        <div className="fixed inset-0 bg-black/85 z-[300] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#121214] border border-[#27272a] rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#27272a]">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                <h3 className="text-lg font-bold text-white">Replace Active Dataset?</h3>
+              </div>
+              <button 
+                onClick={handleCancelReplace}
+                className="text-zinc-400 hover:text-white p-1 rounded hover:bg-[#1c1c1f]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              This workspace already contains an active dataset. Would you like to **replace it** with <span className="font-semibold text-white">"{pendingUploadFile.name}"</span> in this workspace, or **open a new workspace** for it?
+            </p>
+            
+            <div className="flex flex-col gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={handleConfirmReplace}
+                className="w-full py-2.5 bg-white text-black font-bold rounded-lg text-xs hover:bg-zinc-200 transition-all active:scale-[0.98]"
+              >
+                Replace in Current Workspace
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmNewWorkspace}
+                className="w-full py-2.5 bg-[#1c1c1f] hover:bg-[#27272a] border border-[#27272a] text-white font-bold rounded-lg text-xs transition-all active:scale-[0.98]"
+              >
+                Open in New Workspace
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelReplace}
+                className="w-full py-2.5 text-zinc-400 hover:text-white font-medium text-xs transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
