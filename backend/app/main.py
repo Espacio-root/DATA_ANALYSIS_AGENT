@@ -244,10 +244,8 @@ async def get_session_dataset(session_id: str):
     try:
         dataset = db_service.get_dataset_by_session(session_id)
         if not dataset:
-            raise HTTPException(status_code=404, detail="No dataset uploaded for this session.")
+            return None
         return dataset
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 @app.get("/api/sessions/{session_id}/dataset/preview")
@@ -513,3 +511,25 @@ async def connect_sql_db(session_id: str, request: DBConnectRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save metadata: {e}")
+
+from fastapi.responses import RedirectResponse
+
+@app.get("/api/charts/signed/{session_id}/{filename}")
+async def get_signed_chart(session_id: str, filename: str):
+    # If in local fallback (no Supabase client)
+    if not db_service.client:
+        local_storage_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../local_storage/charts"))
+        file_path = os.path.join(local_storage_dir, session_id, filename)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Chart not found in local storage.")
+        return FileResponse(file_path)
+    
+    # If we have Supabase client, generate a signed URL and redirect to it
+    s3_path = f"{session_id}/{filename}"
+    try:
+        signed_url = db_service.generate_signed_url("charts", s3_path)
+        if not signed_url:
+            raise HTTPException(status_code=404, detail="Chart not found in storage.")
+        return RedirectResponse(url=signed_url)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
