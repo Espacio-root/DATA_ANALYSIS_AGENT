@@ -92,6 +92,14 @@ export default function App() {
   useEffect(() => {
     setActiveThreadId("default");
   }, [selectedSessionId]);
+
+  useEffect(() => {
+    if (selectedSessionId) {
+      document.title = "Home";
+    } else {
+      document.title = "EasyInsight";
+    }
+  }, [selectedSessionId]);
   
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
@@ -861,19 +869,19 @@ export default function App() {
       {/* 1. TOP MENU BAR (Google Colab style) */}
       <div className="h-14 border-b border-[#27272a] bg-[#121214] flex items-center justify-between px-4 shrink-0 z-30">
         <div className="flex items-center gap-3">
-          {/* Orange DA logo (Colab CO logo feel) - Clickable home link */}
-          <div 
+          {/* Clickable logo - Home link */}
+          <img
+            src="/logo.png"
+            alt="EasyInsight Logo"
             onClick={() => {
               setSelectedSessionId(null);
               setActiveThreadId("default");
             }}
-            className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#e58a2d] text-white font-extrabold text-sm select-none shadow-md cursor-pointer hover:bg-[#d67b22] transition-colors"
+            className="w-9 h-9 object-contain cursor-pointer"
             title="Go to Home"
-          >
-            DA
-          </div>
+          />
           <div className="flex flex-col">
-            <span className="font-extrabold text-sm md:text-base text-white leading-tight tracking-wide">Data Agent Studio</span>
+            <span className="font-extrabold text-sm md:text-base text-white leading-tight tracking-wide">EasyInsight</span>
             <div className="flex items-center gap-5 text-sm mt-1 font-sans relative">
               {/* File Dropdown Trigger */}
               <div className="relative" onClick={(e) => e.stopPropagation()}>
