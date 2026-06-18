@@ -1180,16 +1180,15 @@ export default function App() {
       <div className="h-14 border-b border-[#27272a] bg-[#121214] flex items-center justify-between px-4 shrink-0 z-30">
         <div className="flex items-center gap-3">
           {/* Clickable logo - Home link */}
-          <img
-            src="/logo.png"
-            alt="EasyInsight Logo"
+          <div 
             onClick={() => {
               setSelectedSessionId(null);
-              setActiveThreadId("default");
+              window.history.pushState({}, '', '/');
             }}
-            className="w-9 h-9 object-contain cursor-pointer"
-            title="Go to Home"
-          />
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white shrink-0 cursor-pointer shadow-lg shadow-orange-900/20 hover:scale-105 transition-transform"
+          >
+            <Sparkles className="w-4 h-4" />
+          </div>
           <div className="flex flex-col">
             <span className="font-extrabold text-sm md:text-base text-white leading-tight tracking-wide">EasyInsight</span>
             <div className="flex items-center gap-5 text-sm mt-1 font-sans relative">
@@ -2343,7 +2342,7 @@ export default function App() {
                     {uniqueCharts.length > 0 ? (
                       uniqueCharts.map((m, cidx) => {
                         const chartUrl = m.chart_url || "";
-                        const fullUrl = chartUrl.startsWith("http") ? chartUrl : `http://localhost:8000${chartUrl}`;
+                        const fullUrl = chartUrl.startsWith("http") ? chartUrl : `${API_BASE.replace('/api', '')}${chartUrl}`;
                         const msgIdx = messages.findIndex(msg => msg.id === m.id);
                         const associatedQuestion = msgIdx > 0 ? messages[msgIdx - 1].content : "Data query visualization";
                         
