@@ -1,0 +1,6 @@
+.env
+__pycache__/
+temp_datasets/
+local_storage/
+*.pyc
+check_csv.py

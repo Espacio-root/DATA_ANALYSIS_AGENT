@@ -1,6 +1,6 @@
 # EasyInsight
 
-EasyInsight is an autonomous data analysis platform that enables users to upload datasets (CSV, JSON, Excel), run natural language queries, and automatically generate code, statistical analysis, and visualizations in a secure execution sandbox.
+EasyInsight is an autonomous data analysis platform that enables users to upload datasets (CSV, JSON, Excel) or establish their SQL/Postgres connection, run natural language queries, and automatically generate code, statistical analysis, and visualizations in a secure execution sandbox.
 
 ---
 
@@ -97,9 +97,3 @@ The backend is configured to run on Hugging Face Spaces using the Docker SDK.
 3. Set `VITE_API_BASE` in the frontend production build to point to your Hugging Face Space app URL (e.g., `https://<username>-<space-name>.hf.space/api`).
 
 ---
-
-## Contributors
-
-- **Ahmad Anzar** (Lead Developer)
-- **Smit Rupani** (Security and Sandbox Hardening)
-- **Sahadheep Reddy** (Project Setup and Documentation)
