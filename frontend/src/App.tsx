@@ -1081,7 +1081,7 @@ export default function App() {
               <thead>
                 <tr className="bg-[#18181b] border-b border-[#27272a]">
                   {headerRow.map((cell, idx) => (
-                    <th key={idx} className="p-2.5 font-semibold text-zinc-255 border-r border-[#27272a] last:border-r-0">
+                    <th key={idx} className="p-2.5 font-semibold text-zinc-200 border-r border-[#27272a] last:border-r-0">
                       {parseInlineMarkdown(cell)}
                     </th>
                   ))}
@@ -1495,7 +1495,7 @@ export default function App() {
                               : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
                           }`}
                         >
-                          <MessageSquare className="w-3 h-3 shrink-0 text-zinc-550" />
+                          <MessageSquare className="w-3 h-3 shrink-0 text-zinc-500" />
                           <span className="truncate">General Chat</span>
                         </div>
 
@@ -1540,7 +1540,7 @@ export default function App() {
                                   />
                                 ) : (
                                   <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                    <MessageSquare className="w-3 h-3 shrink-0 text-zinc-555" />
+                                    <MessageSquare className="w-3 h-3 shrink-0 text-zinc-500" />
                                     <span className="truncate">{t.title}</span>
                                   </div>
                                 )}
@@ -1553,7 +1553,7 @@ export default function App() {
                                         setEditingThreadId(t.id);
                                         setEditingThreadTitle(t.title);
                                       }}
-                                      className="p-0.5 rounded hover:text-zinc-350 text-zinc-500 transition"
+                                      className="p-0.5 rounded hover:text-zinc-300 text-zinc-500 transition"
                                       title="Rename Thread"
                                     >
                                       <Edit3 className="w-3 h-3" />
@@ -1603,7 +1603,7 @@ export default function App() {
                                         e.stopPropagation();
                                         setDeletingThreadId(null);
                                       }}
-                                      className="text-[9px] font-bold uppercase tracking-wider bg-zinc-800 hover:bg-zinc-700 text-zinc-350 px-2.5 py-1 rounded transition"
+                                      className="text-[9px] font-bold uppercase tracking-wider bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1 rounded transition"
                                     >
                                       Cancel
                                     </button>
@@ -1858,7 +1858,7 @@ export default function App() {
                                 e.stopPropagation();
                                 setShowInlineDeleteConfirm(false);
                               }}
-                              className="text-[9px] font-bold uppercase tracking-wider bg-zinc-800 hover:bg-zinc-700 text-zinc-350 px-2.5 py-1.5 rounded transition"
+                              className="text-[9px] font-bold uppercase tracking-wider bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1.5 rounded transition"
                             >
                               Cancel
                             </button>
@@ -1909,7 +1909,7 @@ export default function App() {
                                     <span className="text-[9px] bg-amber-950/60 text-amber-400 border border-amber-800/40 px-1.5 py-0.5 rounded font-mono font-bold">TXT</span>
                                   )}
                                 </span>
-                                <span className="text-sm font-semibold text-zinc-150 truncate" title={col}>
+                                <span className="text-sm font-semibold text-zinc-200 truncate" title={col}>
                                   {col}
                                 </span>
                                 {hasAnomaly && (
@@ -1989,7 +1989,7 @@ export default function App() {
                 ) : (
                   <div className="flex-1 flex flex-col space-y-4">
                     <div className="flex-1 flex flex-col items-center justify-center text-center p-4 border border-zinc-800 bg-[#1c1c1f]/20 rounded-2xl">
-                      <Sparkles className="w-6 h-6 text-emerald-450 mb-2" />
+                      <Sparkles className="w-6 h-6 text-emerald-500 mb-2" />
                       <h4 className="text-white font-semibold text-sm mb-1">Demo Dataset</h4>
                       <p className="text-[10px] text-zinc-400 max-w-[180px] mb-3">Load sample Titanic data</p>
                       <button 
@@ -2160,7 +2160,7 @@ export default function App() {
                 )}
                 {isQuerying && !streamingMsgId && (
                   <div className="flex flex-col items-start animate-fade-in">
-                    <div className="bg-[#1c1c1f] border border-[#27272a] text-zinc-350 rounded-2xl rounded-bl-none px-4 py-3.5 text-sm flex items-center gap-2.5">
+                    <div className="bg-[#1c1c1f] border border-[#27272a] text-zinc-300 rounded-2xl rounded-bl-none px-4 py-3.5 text-sm flex items-center gap-2.5">
                       <Loader2 className="w-4 h-4 animate-spin text-white" />
                       <span className="font-semibold">
                         {isVisualQuery(activeQuestion) ? "Visualizing & Plotting..." : "Analyzing & Processing..."}
@@ -2173,7 +2173,7 @@ export default function App() {
 
               <form onSubmit={handleAskQuestion} className="p-4 pb-4 border-t border-[#27272a] bg-[#121214]">
                 {selectedDiagram && (
-                  <div className="mb-2.5 flex items-center justify-between bg-[#1c1c1f] border border-zinc-800 rounded-xl p-2.5 text-[11px] text-zinc-355 gap-3">
+                  <div className="mb-2.5 flex items-center justify-between bg-[#1c1c1f] border border-zinc-800 rounded-xl p-2.5 text-[11px] text-zinc-300 gap-3">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       {selectedDiagram.chartUrl && (
                         <img 
@@ -2213,7 +2213,7 @@ export default function App() {
                           executeAnalysisQuestion(suggestion);
                         }}
                         disabled={isQuerying}
-                        className="text-[11px] text-zinc-450 hover:text-white bg-zinc-900/60 hover:bg-[#1c1c1f] border border-[#27272a] rounded-lg px-2.5 py-1.5 transition text-left cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                        className="text-[11px] text-zinc-400 hover:text-white bg-zinc-900/60 hover:bg-[#1c1c1f] border border-[#27272a] rounded-lg px-2.5 py-1.5 transition text-left cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                       >
                         💡 {suggestion}
                       </button>
@@ -2280,7 +2280,7 @@ export default function App() {
               {!isVisualsOpen ? (
                 <div className="flex-1 flex flex-col items-center justify-between py-6 h-full select-none">
                   {/* Chevron pointing left to expand */}
-                  <ChevronRight className="w-5 h-5 text-zinc-455 rotate-180" />
+                  <ChevronRight className="w-5 h-5 text-zinc-400 rotate-180" />
                   
                   {/* Vertical title written vertically */}
                   <div className="flex-1 flex items-center justify-center">
@@ -2295,7 +2295,7 @@ export default function App() {
 
                   {/* Badging showing plot count */}
                   {uniqueCharts.length > 0 ? (
-                    <span className="text-[9px] font-bold font-mono bg-zinc-800 border border-zinc-700 text-zinc-350 px-2 py-0.5 rounded-full">
+                    <span className="text-[9px] font-bold font-mono bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-0.5 rounded-full">
                       {uniqueCharts.length}
                     </span>
                   ) : (
@@ -2364,7 +2364,7 @@ export default function App() {
                                 <span className="text-[10px] text-zinc-400 mt-0.5 font-mono">Plot #{cidx + 1}</span>
                               </div>
                               <div className="flex items-center gap-2 shrink-0 mt-0.5">
-                                <span className="text-[10px] text-zinc-550 font-mono">
+                                <span className="text-[10px] text-zinc-400 font-mono">
                                   {plotTime}
                                 </span>
                                 <button
@@ -2469,7 +2469,7 @@ export default function App() {
                           <ImageIcon className="w-6 h-6" />
                         </div>
                         <h3 className="text-white font-medium mb-1">No Visualizations</h3>
-                        <p className="text-[10px] text-zinc-550 max-w-[180px]">Plot generation requires numerical values queries.</p>
+                        <p className="text-[10px] text-zinc-400 max-w-[180px]">Plot generation requires numerical values queries.</p>
                       </div>
                     )}
                   </div>
@@ -2634,7 +2634,7 @@ export default function App() {
                       );
                     })}
                     {filteredSessions.length === 0 && (
-                      <div className="text-center text-xs text-zinc-555 py-16">
+                      <div className="text-center text-xs text-zinc-500 py-16">
                         No workspaces found.
                       </div>
                     )}
@@ -2839,7 +2839,7 @@ export default function App() {
                       setShowCreateInput(false);
                     }
                   }}
-                  className="w-full bg-black border border-[#27272a] rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-550 placeholder-zinc-700"
+                  className="w-full bg-black border border-[#27272a] rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-500 placeholder-zinc-700"
                   autoFocus
                 />
               </div>
@@ -2927,7 +2927,7 @@ export default function App() {
               </button>
             </div>
             
-            <p className="text-xs text-zinc-350 leading-relaxed bg-red-950/10 border border-red-900/20 p-3 rounded-lg">
+            <p className="text-xs text-zinc-300 leading-relaxed bg-red-950/10 border border-red-900/20 p-3 rounded-lg">
               {deleteConfirm.description}
             </p>
             
