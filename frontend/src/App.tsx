@@ -1306,7 +1306,7 @@ export default function App() {
                 ref={fileInputRef} 
                 onChange={handleFileUpload} 
                 className="hidden" 
-                accept=".csv,.json,.xls,.xlsx" 
+                accept=".csv,.json,.xls,.xlsx,.sql" 
               />
 
               {/* Progress Bar / Loader overlay */}
@@ -1571,7 +1571,7 @@ export default function App() {
                     <div className="flex-1 flex flex-col items-center justify-center text-center p-4 border-2 border-dashed border-zinc-700 hover:border-zinc-500 rounded-2xl bg-[#1c1c1f]/40 transition-all duration-300">
                       <Upload className="w-6 h-6 text-zinc-400 mb-2" />
                       <h4 className="text-white font-semibold text-sm mb-1">Import Dataset</h4>
-                      <p className="text-[10px] text-zinc-400 max-w-[180px] mb-3 leading-relaxed">CSV, JSON, or Excel</p>
+                      <p className="text-[10px] text-zinc-400 max-w-[180px] mb-3 leading-relaxed">CSV, JSON, Excel, or SQL</p>
                       <button 
                         onClick={() => fileInputRef.current?.click()}
                         className="px-4 py-1.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-zinc-200"

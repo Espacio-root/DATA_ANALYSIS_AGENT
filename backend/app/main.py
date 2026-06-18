@@ -2,6 +2,7 @@ import os
 import shutil
 import httpx
 import pandas as pd
+import re
 from typing import Optional
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -143,8 +144,8 @@ async def delete_session_dataset(session_id: str):
 async def upload_dataset(session_id: str, file: UploadFile = File(...)):
     # 1. Validate file extension
     ext = os.path.splitext(file.filename)[-1].lower()
-    if ext not in [".csv", ".json", ".xls", ".xlsx"]:
-        raise HTTPException(status_code=400, detail="Unsupported file format. Please upload CSV, JSON, or Excel.")
+    if ext not in [".csv", ".json", ".xls", ".xlsx", ".sql"]:
+        raise HTTPException(status_code=400, detail="Unsupported file format. Please upload CSV, JSON, Excel, or SQL.")
 
     # 2. Read file into memory first so we can check size before touching disk
     try:
@@ -161,13 +162,55 @@ async def upload_dataset(session_id: str, file: UploadFile = File(...)):
                    f"Your file is {len(file_bytes) // (1024 * 1024)} MB."
         )
 
-    # 4. Write to local cache
+    # 3.5 Parse SQL file if extension is .sql
+    if ext == ".sql":
+        try:
+            sql_text = file_bytes.decode("utf-8", errors="ignore")
+            # Clean MySQL-specific dump constraints
+            sql_clean = sql_text.replace(chr(96), '')
+            sql_clean = re.sub(r'ENGINE\s*=\s*\w+', '', sql_clean, flags=re.IGNORECASE)
+            sql_clean = re.sub(r'DEFAULT\s+CHARSET\s*=\s*\w+', '', sql_clean, flags=re.IGNORECASE)
+            sql_clean = re.sub(r'AUTO_INCREMENT\s*=\s*\d+', '', sql_clean, flags=re.IGNORECASE)
+            sql_clean = re.sub(r'int\(\d+\)', 'int', sql_clean, flags=re.IGNORECASE)
+            sql_clean = re.sub(r'tinyint\(\d+\)', 'int', sql_clean, flags=re.IGNORECASE)
+            sql_clean = re.sub(r'AUTO_INCREMENT', '', sql_clean, flags=re.IGNORECASE)
+
+            # Execute in temporary DuckDB connection to extract the data
+            import duckdb
+            temp_con = duckdb.connect(database=':memory:')
+            temp_con.execute(sql_clean)
+            tables = temp_con.execute("PRAGMA show_tables").fetchall()
+            if not tables:
+                raise HTTPException(status_code=400, detail="No tables found in the uploaded SQL file.")
+            
+            # Use the first table found
+            target_table = tables[0][0]
+            df = temp_con.execute(f'SELECT * FROM "{target_table}"').df()
+            temp_con.close()
+
+            # Save as CSV internally
+            local_path = get_local_dataset_path(session_id, f"{target_table}.csv")
+            df.to_csv(local_path, index=False)
+            
+            # Set ext to .csv so the rest of the logic stores it as CSV
+            ext = ".csv"
+            file.filename = f"{target_table}.csv"
+            
+            # Read the generated CSV bytes to upload to Supabase
+            with open(local_path, "rb") as f:
+                file_bytes = f.read()
+
+        except Exception as sql_err:
+            raise HTTPException(status_code=400, detail=f"Failed to parse SQL file: {sql_err}")
+
+    # 4. Write to local cache (skip if already generated from SQL)
     local_path = get_local_dataset_path(session_id, file.filename)
-    try:
-        with open(local_path, "wb") as buffer:
-            buffer.write(file_bytes)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to write local cache: {e}")
+    if not os.path.exists(local_path):
+        try:
+            with open(local_path, "wb") as buffer:
+                buffer.write(file_bytes)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to write local cache: {e}")
 
     # 5. Profile data using DuckDB
     try:

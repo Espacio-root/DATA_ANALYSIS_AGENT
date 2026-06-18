@@ -144,9 +144,9 @@ def execute_in_sandbox(code_content: str, dataset_local_path: str) -> tuple[bool
     """
     Validates then executes python code against a dataset in a sandbox environment.
 
-    Step 1 – Static validation (always).
-    Step 2 – Docker sandbox (preferred; required in production).
-    Step 3 – Local fallback (dev/testing only; disabled when REQUIRE_DOCKER=true).
+    Step 1  Static validation (always).
+    Step 2  Docker sandbox (preferred; required in production).
+    Step 3  Local fallback (dev/testing only; disabled when REQUIRE_DOCKER=true).
 
     Returns:
         (success: bool, result: any_or_error_message, chart_generated: bool, chart_local_path: str)
