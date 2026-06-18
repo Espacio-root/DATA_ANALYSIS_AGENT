@@ -328,14 +328,22 @@ async def clean_session_dataset(session_id: str):
         download_dataset_if_missing(s3_path, local_path)
         
         ext = os.path.splitext(local_path)[-1].lower()
-        if ext == ".csv":
-            df = pd.read_csv(local_path)
-        elif ext == ".json":
-            df = pd.read_json(local_path)
-        elif ext in [".xls", ".xlsx"]:
-            df = pd.read_excel(local_path)
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported dataset format.")
+        try:
+            if ext == ".csv":
+                df = pd.read_csv(local_path)
+            elif ext == ".json":
+                df = pd.read_json(local_path)
+            elif ext in [".xls", ".xlsx"]:
+                df = pd.read_excel(local_path)
+            else:
+                raise HTTPException(status_code=400, detail="Unsupported dataset format.")
+        except HTTPException:
+            raise
+        except Exception as read_err:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Failed to parse dataset file. It might be corrupted or incorrectly formatted: {read_err}"
+            )
             
         # Perform standard cleaning
         # 1. Strip string column whitespaces
@@ -402,15 +410,23 @@ async def get_dataset_preview(session_id: str):
         download_dataset_if_missing(s3_path, local_path)
         
         ext = os.path.splitext(local_path)[-1].lower()
-        if ext == ".csv":
-            df = pd.read_csv(local_path, nrows=15)
-        elif ext == ".json":
-            df = pd.read_json(local_path)
-            df = df.head(15)
-        elif ext in [".xls", ".xlsx"]:
-            df = pd.read_excel(local_path, nrows=15)
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported dataset format.")
+        try:
+            if ext == ".csv":
+                df = pd.read_csv(local_path, nrows=15)
+            elif ext == ".json":
+                df = pd.read_json(local_path)
+                df = df.head(15)
+            elif ext in [".xls", ".xlsx"]:
+                df = pd.read_excel(local_path, nrows=15)
+            else:
+                raise HTTPException(status_code=400, detail="Unsupported dataset format.")
+        except HTTPException:
+            raise
+        except Exception as read_err:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Failed to parse dataset file for preview. It might be corrupted or incorrectly formatted: {read_err}"
+            )
             
         # Convert NaN/Infinity values to None for JSON compliance
         df = df.replace({pd.NA: None})
@@ -439,14 +455,17 @@ async def get_dataset_view(session_id: str):
         download_dataset_if_missing(s3_path, local_path)
         
         ext = os.path.splitext(local_path)[-1].lower()
-        if ext == ".csv":
-            df = pd.read_csv(local_path, nrows=100)
-        elif ext == ".json":
-            df = pd.read_json(local_path).head(100)
-        elif ext in [".xls", ".xlsx"]:
-            df = pd.read_excel(local_path, nrows=100)
-        else:
-            return HTMLResponse("<h3>Unsupported file format.</h3>", status_code=400)
+        try:
+            if ext == ".csv":
+                df = pd.read_csv(local_path, nrows=100)
+            elif ext == ".json":
+                df = pd.read_json(local_path).head(100)
+            elif ext in [".xls", ".xlsx"]:
+                df = pd.read_excel(local_path, nrows=100)
+            else:
+                return HTMLResponse("<h3>Unsupported file format.</h3>", status_code=400)
+        except Exception as read_err:
+            return HTMLResponse(f"<h3>Failed to read dataset: {read_err}</h3>", status_code=400)
             
         html_table = df.to_html(classes="table-preview", index=False, na_rep="null")
         
