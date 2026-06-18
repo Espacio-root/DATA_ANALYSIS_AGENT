@@ -707,12 +707,15 @@ async def get_signed_chart(session_id: str, filename: str):
             raise HTTPException(status_code=404, detail="Chart not found in storage.")
         
         # Proxy the request to avoid 307 Temporary Redirects flooding the network/logs
-        import requests
+        import urllib.request
         from fastapi.responses import Response
-        img_res = requests.get(signed_url, timeout=10)
-        if img_res.status_code == 200:
-            return Response(content=img_res.content, media_type="image/png")
-        else:
-            raise HTTPException(status_code=img_res.status_code, detail="Failed to fetch image from storage.")
+        
+        req = urllib.request.Request(signed_url, headers={'User-Agent': 'Mozilla/5.0'})
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                img_bytes = response.read()
+                return Response(content=img_bytes, media_type="image/png")
+        except Exception as fetch_err:
+            raise HTTPException(status_code=500, detail=f"Failed to fetch image from storage: {fetch_err}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
